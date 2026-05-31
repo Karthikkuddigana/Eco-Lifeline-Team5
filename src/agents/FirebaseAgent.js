@@ -30,6 +30,20 @@ export class FirebaseAgent {
     return this.logs.join('\n');
   }
 
+  // Default implementations delegate to dbService (browser context).
+  // server.js overrides these on the instance for file-based storage.
+  async getRecentPendingTickets(hours) {
+    return dbService.getRecentPendingTickets(hours);
+  }
+
+  async saveTicket(ticket) {
+    return dbService.saveTicket(ticket);
+  }
+
+  async updateTicket(id, updates) {
+    return dbService.updateTicket(id, updates);
+  }
+
   async run(routedData, imageUrl) {
     this.logs = [];
     this.log("Starting Firebase Storage & Duplicate Auditing...");
@@ -38,7 +52,7 @@ export class FirebaseAgent {
     // Step 1: Fetch recent tickets (last 3 hours, pending status)
     let recentTickets = [];
     try {
-      recentTickets = await dbService.getRecentPendingTickets(3);
+      recentTickets = await this.getRecentPendingTickets(3);
       this.log(`Retrieved ${recentTickets.length} active PENDING tickets in this window.`);
     } catch (e) {
       this.log(`Failed to fetch recent tickets: ${e.message}. Defaulting to no duplicates.`);
@@ -74,7 +88,7 @@ export class FirebaseAgent {
 
       const updatedLogs = duplicateTicket.logs + `\n\n[Firebase Agent Update - ${new Date().toLocaleTimeString()}]: Duplicate reported! Incrementing ticket upvote count to ${duplicateTicket.upvotes + 1}.`;
       
-      await dbService.updateTicket(duplicateTicket.id, {
+      await this.updateTicket(duplicateTicket.id, {
         upvotes: duplicateTicket.upvotes + 1,
         logs: updatedLogs
       });
@@ -116,7 +130,7 @@ export class FirebaseAgent {
       };
 
       this.log("Saving document to Firestore...");
-      const savedTicket = await dbService.saveTicket(newTicket);
+      const savedTicket = await this.saveTicket(newTicket);
       this.log(`Committed! Generated Ticket ID: [${savedTicket.id}]`);
 
       // Dispatch alert logging
