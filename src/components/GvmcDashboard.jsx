@@ -1,6 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { dbService } from '../services/firebase';
+
+const getFilteredTickets = (tickets, filter) => {
+  return tickets.filter(ticket => {
+    if (filter === 'ALL') return true;
+    if (filter === 'CRITICAL') return ticket.priority === 'CRITICAL' || ticket.priority === 'HIGH';
+    return ticket.status === filter;
+  });
+};
 
 export default function GvmcDashboard() {
   const [tickets, setTickets] = useState([]);
@@ -55,7 +63,7 @@ export default function GvmcDashboard() {
     });
     markersRef.current = {};
 
-    const filteredTickets = getFilteredTickets();
+    const filteredTickets = getFilteredTickets(tickets, filter);
 
     filteredTickets.forEach(ticket => {
       const { id, latitude, longitude, priority, locationName, landmark, hazard } = ticket;
@@ -110,14 +118,6 @@ export default function GvmcDashboard() {
       }
     }
   }, [tickets, filter]);
-
-  const getFilteredTickets = () => {
-    return tickets.filter(ticket => {
-      if (filter === 'ALL') return true;
-      if (filter === 'CRITICAL') return ticket.priority === 'CRITICAL' || ticket.priority === 'HIGH';
-      return ticket.status === filter;
-    });
-  };
 
   const handleTicketClick = (ticket) => {
     setSelectedTicket(ticket);
@@ -204,12 +204,12 @@ export default function GvmcDashboard() {
 
           {/* Incident Tickets list */}
           <div className="ticket-list">
-            {getFilteredTickets().length === 0 ? (
+            {getFilteredTickets(tickets, filter).length === 0 ? (
               <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
                 📭 No incidents match this filter.
               </div>
             ) : (
-              getFilteredTickets().map(ticket => (
+              getFilteredTickets(tickets, filter).map(ticket => (
                 <div 
                   key={ticket.id} 
                   className={`ticket-card ${selectedTicket && selectedTicket.id === ticket.id ? 'selected' : ''}`}

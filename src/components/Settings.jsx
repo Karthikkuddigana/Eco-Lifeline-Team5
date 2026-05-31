@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { dbService } from '../services/firebase';
 
 export default function Settings({ isOpen, onClose }) {
@@ -20,12 +20,14 @@ export default function Settings({ isOpen, onClose }) {
   useEffect(() => {
     if (isOpen) {
       const settings = dbService.getSettings();
-      setGeminiApiKey(settings.geminiApiKey || '');
-      setGoogleMapsApiKey(settings.googleMapsApiKey || '');
-      setUseFirebase(settings.useFirebase || false);
-      if (settings.firebaseConfig) {
-        setFirebaseConfig(settings.firebaseConfig);
-      }
+      setTimeout(() => {
+        setGeminiApiKey(settings.geminiApiKey || '');
+        setGoogleMapsApiKey(settings.googleMapsApiKey || '');
+        setUseFirebase(settings.useFirebase || false);
+        if (settings.firebaseConfig) {
+          setFirebaseConfig(settings.firebaseConfig);
+        }
+      }, 0);
     }
   }, [isOpen]);
 

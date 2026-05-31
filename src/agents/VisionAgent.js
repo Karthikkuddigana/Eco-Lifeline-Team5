@@ -87,7 +87,7 @@ export class VisionAgent {
           },
           identifiedLandmark: {
             type: "STRING",
-            enum: ["Kurusura Submarine Museum", "Kali Temple", "VUDA Park Beach Access", "Yarada Beach Lighthouse", "Yarada Beach North Shore", "None"],
+            enum: ["Kurusura Submarine Museum", "Kali Temple", "VUDA Park Beach Access", "Yarada Beach Lighthouse", "Yarada Beach North Shore", "RK Beach General Area", "Yarada Beach General Area", "None"],
             description: "Identify if any of these specific pre-defined landmarks are visually present and recognized in the image. Choose None if no landmark is present or if it is another beach (like Goa Beach)."
           },
           hazardType: { 
@@ -115,13 +115,23 @@ export class VisionAgent {
 1. Is it a beach safety (rip current) or sanitation (marine debris, trash) issue at RK Beach or Yarada Beach in Visakhapatnam, Andhra Pradesh, India? (Look for key signs like specific sandy beach terrain, yellow-blue waves, brick pathways, VUDA park fences, Kurusura Submarine, Kali Temple, or shoreline settings).
 2. Identify the specific hazard present (e.g. rip currents, plastic netting, medical waste, glass bottles, general debris).
 3. If it is NOT a beach issue (e.g. someone uploaded a personal selfie, a document, or an interior room), flag isBeachIssue as false and set hazardType to none.
-4. Identify if any of these specific landmarks are visually present and recognized in the image: Kurusura Submarine Museum, Kali Temple, VUDA Park Beach Access, Yarada Beach Lighthouse, Yarada Beach North Shore. If not present or if it is a generic beach / Goa beach, set identifiedLandmark to None.
+4. Identify if any of these specific landmarks are visually present and recognized in the image:
+   - Kurusura Submarine Museum
+   - Kali Temple
+   - VUDA Park Beach Access
+   - Yarada Beach Lighthouse
+   - Yarada Beach North Shore
+   - RK Beach General Area (Use this if the image is clearly RK Beach, showing features like cargo ships in the background, breakwater tetrapods, beach pathway, or port cranes, but doesn't show specific monuments)
+   - Yarada Beach General Area (Use this if the image is clearly Yarada Beach with its characteristic hills, mountains, and cliffs surrounding the cove, but doesn't show the lighthouse)
+   If not present or if it is a generic beach / Goa beach, set identifiedLandmark to None.
 5. Estimate the coordinates based on visual landmarks if coordinates are not provided:
    - Kurusura Submarine Museum: 17.7182, 83.3308
    - Kali Temple: 17.7144, 83.3235
    - VUDA Park Beach Access: 17.7214, 83.3341
    - Yarada Beach Lighthouse: 17.6531, 83.2721
    - Yarada Beach North Shore: 17.6575, 83.2685
+   - RK Beach General Area: 17.7160, 83.3250
+   - Yarada Beach General Area: 17.6554, 83.2694
 
 Analyze carefully. If the image is a generic selfie, document, or from an out-of-bounds beach (like Goa Beach), reject it or set identifiedLandmark to None.`;
 
@@ -197,7 +207,9 @@ Analyze carefully. If the image is a generic selfie, document, or from an out-of
           "Kali Temple": { latitude: 17.7144, longitude: 83.3235 },
           "VUDA Park Beach Access": { latitude: 17.7214, longitude: 83.3341 },
           "Yarada Beach Lighthouse": { latitude: 17.6531, longitude: 83.2721 },
-          "Yarada Beach North Shore": { latitude: 17.6575, longitude: 83.2685 }
+          "Yarada Beach North Shore": { latitude: 17.6575, longitude: 83.2685 },
+          "RK Beach General Area": { latitude: 17.7160, longitude: 83.3250 },
+          "Yarada Beach General Area": { latitude: 17.6554, longitude: 83.2694 }
         };
 
         if (analysis.identifiedLandmark === 'None' || !LANDMARK_COORDS[analysis.identifiedLandmark]) {

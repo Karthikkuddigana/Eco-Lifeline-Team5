@@ -1,8 +1,4 @@
-import React, { useState, useRef } from 'react';
-import { VisionAgent } from '../agents/VisionAgent';
-import { RoutingAgent } from '../agents/RoutingAgent';
-import { FirebaseAgent } from '../agents/FirebaseAgent';
-import { dbService } from '../services/firebase';
+import { useState, useRef } from 'react';
 
 
 

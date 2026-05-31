@@ -2,7 +2,8 @@
 const getBaseUrl = () => {
   if (typeof window === 'undefined') {
     // In Node.js backend
-    return `http://localhost:${process.env.PORT || 5000}`;
+    const port = (typeof globalThis.process !== 'undefined' && globalThis.process.env && globalThis.process.env.PORT) || 5000;
+    return `http://localhost:${port}`;
   }
   return ''; // In browser
 };

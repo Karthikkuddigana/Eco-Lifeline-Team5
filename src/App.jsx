@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import CitizenPortal from './components/CitizenPortal';
 import GvmcDashboard from './components/GvmcDashboard';
 import Settings from './components/Settings';
