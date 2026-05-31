@@ -32,43 +32,8 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR);
 }
 
-const MOCK_SEEDS = [
-  {
-    id: 'GVMC-1001',
-    image: 'https://images.unsplash.com/photo-1618477388954-7852f32655ec?auto=format&fit=crop&w=600&q=80',
-    hazard: 'Scattered plastic trash and discarded nets near the tide line.',
-    hazardType: 'plastic_debris',
-    latitude: 17.7144,
-    longitude: 83.3235,
-    locationName: 'Kali Temple, RK Beach',
-    landmark: 'RK Beach near Kali Temple',
-    zone: 'Zone 2',
-    priority: 'HIGH',
-    status: 'PENDING',
-    upvotes: 2,
-    timestamp: Date.now() - 3600000 * 2,
-    logs: 'Vision Agent: Verified location as RK Beach. Identified plastic hazard.\nRouting Agent: Categorized as HIGH priority. Assigned to Zone 2 office.\nFirebase Agent: Checked for duplicates. No duplicates. Committed new ticket GVMC-1001.'
-  },
-  {
-    id: 'GVMC-1002',
-    image: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=600&q=80',
-    hazard: 'Shattered glass bottles and medical syringes on beach pathway.',
-    hazardType: 'medical_waste',
-    latitude: 17.6835,
-    longitude: 83.3002,
-    locationName: 'Yarada Beach Shoreline',
-    landmark: 'Yarada Beach shoreline',
-    zone: 'Zone 3',
-    priority: 'CRITICAL',
-    status: 'DISPATCHED',
-    upvotes: 3,
-    timestamp: Date.now() - 3600000 * 4,
-    logs: 'Vision Agent: Verified location as Yarada Beach. Identified medical waste / glass.\nRouting Agent: Hazardous waste near shoreline. Escalated to CRITICAL.\nFirebase Agent: Dispatch alert triggered. Logged incident.'
-  }
-];
-
 if (!fs.existsSync(TICKETS_FILE)) {
-  fs.writeFileSync(TICKETS_FILE, JSON.stringify(MOCK_SEEDS, null, 2));
+  fs.writeFileSync(TICKETS_FILE, JSON.stringify([], null, 2));
 }
 
 // Database Helpers

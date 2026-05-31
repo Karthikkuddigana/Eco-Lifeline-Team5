@@ -4,45 +4,7 @@ import { RoutingAgent } from '../agents/RoutingAgent';
 import { FirebaseAgent } from '../agents/FirebaseAgent';
 import { dbService } from '../services/firebase';
 
-// Mock images for quick presets
-const PRESET_MOCKS = [
-  {
-    name: '🔴 Medical Syringes (Yarada)',
-    filename: 'yarada_medical_waste.jpg',
-    image: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=600&q=80',
-    description: 'A heap of plastic garbage, glass shards, and medical equipment on the wet sand.',
-    size: 245000,
-    latitude: 17.6531,
-    longitude: 83.2721
-  },
-  {
-    name: '🟡 Rip Current Wave (RK Beach)',
-    filename: 'rkbeach_rip_current.jpg',
-    image: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?auto=format&fit=crop&w=600&q=80',
-    description: 'Turbulent rip channel crossing near the shore. Waves are high and breaking unevenly.',
-    size: 512000,
-    latitude: 17.7144,
-    longitude: 83.3235
-  },
-  {
-    name: '🟢 Discarded Net (Submarine Area)',
-    filename: 'rkbeach_submarine_ghostnet.jpg',
-    image: 'https://images.unsplash.com/photo-1618477388954-7852f32655ec?auto=format&fit=crop&w=600&q=80',
-    description: 'Ghost fishing nets and plastics entangled near the Kurusura Submarine pavement.',
-    size: 320000,
-    latitude: 17.7182,
-    longitude: 83.3308
-  },
-  {
-    name: '🚫 Rejection: Selfie at Cafe',
-    filename: 'visitor_selfie.jpg',
-    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-    description: 'Citizen taking a selfie indoors in front of a coffee shop.',
-    size: 154000,
-    latitude: 0,
-    longitude: 0
-  }
-];
+
 
 export default function CitizenPortal() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -98,18 +60,7 @@ export default function CitizenPortal() {
     }
   };
 
-  const loadPreset = (preset) => {
-    resetPipeline();
-    setSelectedFile({
-      name: preset.filename,
-      size: preset.size,
-      type: 'image/jpeg',
-      presetUrl: preset.image,
-      presetLatitude: preset.latitude,
-      presetLongitude: preset.longitude
-    });
-    setPreviewUrl(preset.image);
-  };
+
 
   // Run the multi-agent pipeline sequential workflow
   const launchPipeline = async () => {
@@ -123,15 +74,7 @@ export default function CitizenPortal() {
     
     try {
       const formData = new FormData();
-      if (selectedFile.presetUrl) {
-        // Send a small dummy blob so multer parses it as a file upload
-        const dummyBlob = new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], { type: 'image/png' });
-        formData.append('image', dummyBlob, selectedFile.name);
-        formData.append('presetLatitude', selectedFile.presetLatitude);
-        formData.append('presetLongitude', selectedFile.presetLongitude);
-      } else {
-        formData.append('image', selectedFile);
-      }
+      formData.append('image', selectedFile);
 
       const response = await fetch('/api/report', {
         method: 'POST',
@@ -213,22 +156,7 @@ export default function CitizenPortal() {
           </p>
         </div>
 
-        {/* Preset quick test buttons */}
-        <div>
-          <span className="form-label" style={{ marginBottom: '0.75rem' }}>Try Preset Scenarios</span>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-            {PRESET_MOCKS.map((preset, index) => (
-              <button 
-                key={index} 
-                className="btn-secondary" 
-                style={{ fontSize: '0.8rem', padding: '0.5rem', justifyContent: 'flex-start' }}
-                onClick={() => loadPreset(preset)}
-              >
-                {preset.name}
-              </button>
-            ))}
-          </div>
-        </div>
+
 
         {/* Drag & Drop Box */}
         <div 
