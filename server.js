@@ -130,6 +130,23 @@ app.post('/api/report', upload.single('image'), async (req, res) => {
     const routingAgent = new RoutingAgent();
     const routingResult = await routingAgent.run(visionResult);
 
+    // Validate coordinates resolved by Routing Agent
+    const lat = routingResult.latitude;
+    const lng = routingResult.longitude;
+    const isOutofBounds = lat === 0 || lng === 0 || lat < 17.0 || lat > 18.0 || lng < 83.0 || lng > 84.0;
+
+    if (isOutofBounds) {
+      console.log(`Pipeline Interrupted: Location is out of bounds or missing GPS coordinates. Resolved: (${lat}, ${lng}).`);
+      return res.json({
+        isValid: false,
+        reason: "No valid GPS coordinates or Visakhapatnam beach landmarks could be resolved. Ticket dispatch aborted.",
+        logs: [
+          `=== Agent 1: Vision & Inspection ===\n${visionAgent.getLogs()}`,
+          `=== Agent 2: Geo-Spatial & Routing ===\n${routingAgent.getLogs()}\n[Routing Agent] DECISION: Location is out-of-bounds of GVMC jurisdiction (${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E). Recommending rejection.`
+        ].join('\n\n')
+      });
+    }
+
     // Step 3: Firebase Agent (Checks duplicates in local file database)
     const firebaseAgent = new FirebaseAgent();
     

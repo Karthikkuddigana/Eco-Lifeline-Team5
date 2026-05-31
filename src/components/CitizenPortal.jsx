@@ -88,12 +88,28 @@ export default function CitizenPortal() {
       const res = await response.json();
 
       if (!res.isValid) {
-        setVisionState({ 
-          status: 'failed', 
-          logs: res.logs || 'Image analysis failed verification.', 
-          result: null 
+        // Parse logs to identify if Agent 1 or Agent 2 failed
+        const logSections = (res.logs || '').split('=== Agent ');
+        let visionLogs = res.logs || 'Image analysis failed verification.';
+        let routingLogs = '';
+
+        logSections.forEach(section => {
+          if (section.startsWith('1: Vision')) {
+            visionLogs = '=== Agent ' + section.trim();
+          } else if (section.startsWith('2: Geo-Spatial')) {
+            routingLogs = '=== Agent ' + section.trim();
+          }
         });
-        setPipelineStep(5);
+
+        if (routingLogs) {
+          setVisionState({ status: 'completed', logs: visionLogs, result: null });
+          setRoutingState({ status: 'failed', logs: routingLogs, result: null });
+          setPipelineStep(5);
+        } else {
+          setVisionState({ status: 'failed', logs: visionLogs, result: null });
+          setPipelineStep(5);
+        }
+
         setFinalStatus(`Rejected: ${res.reason}`);
         return;
       }

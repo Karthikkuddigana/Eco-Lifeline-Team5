@@ -112,11 +112,8 @@ export class FirebaseAgent {
         upvotes: 1,
         timestamp: Date.now(),
         // Save history of agent reasoning in the ticket
-        logs: `--- Vision Agent ---\n${routedData.logs}\n\n--- Routing Agent ---\n${routedData.logs_routing || ''}\n\n--- Firebase Agent ---\n[Firebase Agent]: Verified uniqueness. Logged new ticket.`
+        logs: `=== Agent 1: Vision & Inspection ===\n${routedData.logs_vision || ''}\n\n=== Agent 2: Geo-Spatial & Routing ===\n${routedData.logs_routing || ''}\n\n=== Agent 3: Firebase & Dispatch ===\n${this.getLogs()}`
       };
-
-      // Set logs from routing inside the ticket for full context
-      newTicket.logs = `--- Vision Agent ---\n${routedData.logs}\n\n--- Routing Agent ---\n${routedData.priorityReason}\nRouted to: ${routedData.dispatchOffice}\nTransit estimation: ${routedData.transitTime || '15 mins'}\nTide risk: ${routedData.tideStatus}\n\n--- Firebase Agent ---\n[Firebase Agent]: No duplicates in 15m radius. Created new incident ticket.`;
 
       this.log("Saving document to Firestore...");
       const savedTicket = await dbService.saveTicket(newTicket);

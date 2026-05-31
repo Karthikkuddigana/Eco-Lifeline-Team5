@@ -46,10 +46,10 @@ export class VisionAgent {
         };
         this.log(`EXIF GPS found! Coordinates: ${gps.latitude.toFixed(5)}° N, ${gps.longitude.toFixed(5)}° E`);
       } else {
-        this.log("EXIF metadata lacks GPS coordinates. Moving to Visual Landmark Analysis...");
+        this.log("EXIF metadata lacks GPS coordinates.");
       }
     } catch (e) {
-      this.log(`EXIF parsing skipped/unsupported: ${e.message}. Moving to Visual Analysis...`);
+      this.log(`EXIF parsing skipped/unsupported: ${e.message}.`);
     }
 
     // Step 2: visual analysis using Gemini Flash
@@ -85,6 +85,11 @@ export class VisionAgent {
             type: "STRING", 
             description: "Visual details or landmarks identified (e.g. near Kurusura Submarine, Kali Temple, Yarada lighthouse, or specific pavement color/sand color)." 
           },
+          identifiedLandmark: {
+            type: "STRING",
+            enum: ["Kurusura Submarine Museum", "Kali Temple", "VUDA Park Beach Access", "Yarada Beach Lighthouse", "Yarada Beach North Shore", "None"],
+            description: "Identify if any of these specific pre-defined landmarks are visually present and recognized in the image. Choose None if no landmark is present or if it is another beach (like Goa Beach)."
+          },
           hazardType: { 
             type: "STRING", 
             enum: ["plastic_debris", "medical_waste", "broken_glass", "rip_current", "general_trash", "none"], 
@@ -103,22 +108,22 @@ export class VisionAgent {
             description: "Estimate the longitude based on the landmark (e.g. RK Beach Kali Temple is ~83.3235, Kurusura Submarine is ~83.3308, Yarada beach center is ~83.2694). Return 0 if unable to estimate or not a beach." 
           }
         },
-        required: ["isBeachIssue", "beachName", "landmarkDescription", "hazardType", "hazardDescription", "estimatedLatitude", "estimatedLongitude"]
+        required: ["isBeachIssue", "beachName", "landmarkDescription", "identifiedLandmark", "hazardType", "hazardDescription", "estimatedLatitude", "estimatedLongitude"]
       };
 
       const prompt = `You are the Vision & Inspection Agent of the Eco-Lifeline Sentinel beach safety ecosystem. Your role is to analyze the uploaded citizen/drone image and determine:
 1. Is it a beach safety (rip current) or sanitation (marine debris, trash) issue at RK Beach or Yarada Beach in Visakhapatnam, Andhra Pradesh, India? (Look for key signs like specific sandy beach terrain, yellow-blue waves, brick pathways, VUDA park fences, Kurusura Submarine, Kali Temple, or shoreline settings).
 2. Identify the specific hazard present (e.g. rip currents, plastic netting, medical waste, glass bottles, general debris).
 3. If it is NOT a beach issue (e.g. someone uploaded a personal selfie, a document, or an interior room), flag isBeachIssue as false and set hazardType to none.
-4. Estimate the coordinates based on visual landmarks if coordinates are not provided:
-   - Kurusura Submarine: 17.7182, 83.3308
+4. Identify if any of these specific landmarks are visually present and recognized in the image: Kurusura Submarine Museum, Kali Temple, VUDA Park Beach Access, Yarada Beach Lighthouse, Yarada Beach North Shore. If not present or if it is a generic beach / Goa beach, set identifiedLandmark to None.
+5. Estimate the coordinates based on visual landmarks if coordinates are not provided:
+   - Kurusura Submarine Museum: 17.7182, 83.3308
    - Kali Temple: 17.7144, 83.3235
-   - VUDA Park area: 17.7214, 83.3341
-   - Yarada Beach lighthouse area: 17.6531, 83.2721
-   - General Yarada Beach: 17.6554, 83.2694
-   - General RK Beach: 17.7160, 83.3250
+   - VUDA Park Beach Access: 17.7214, 83.3341
+   - Yarada Beach Lighthouse: 17.6531, 83.2721
+   - Yarada Beach North Shore: 17.6575, 83.2685
 
-Analyze carefully. If the image is a generic selfie or document, reject it by setting isBeachIssue to false.`;
+Analyze carefully. If the image is a generic selfie, document, or from an out-of-bounds beach (like Goa Beach), reject it or set identifiedLandmark to None.`;
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
@@ -160,6 +165,7 @@ Analyze carefully. If the image is a generic selfie or document, reject it by se
       this.log(`Detected Beach: ${analysis.beachName}`);
       this.log(`Detected Hazard: ${analysis.hazardType} (${analysis.hazardDescription})`);
       this.log(`Visual Landmark: ${analysis.landmarkDescription}`);
+      this.log(`Identified Landmark Enum: ${analysis.identifiedLandmark}`);
 
       if (!analysis.isBeachIssue) {
         this.log("DECISION: Image flagged as irrelevant (not a beach issue or out-of-bounds). TERMINATING pipeline.");
@@ -170,10 +176,45 @@ Analyze carefully. If the image is a generic selfie or document, reject it by se
         };
       }
 
-      // If EXIF coordinates exist, use them. Otherwise, use preset coordinates or Gemini estimated ones
-      const finalLat = coordinates ? coordinates.latitude : (file.presetLatitude || analysis.estimatedLatitude);
-      const finalLng = coordinates ? coordinates.longitude : (file.presetLongitude || analysis.estimatedLongitude);
-      const locationSrc = coordinates ? 'EXIF Data' : (file.presetLatitude ? 'Preset Telemetry' : 'Landmark Estimation');
+      // Check if coordinates exist (EXIF or Developer Preset). If not, verify if we can recover from visual landmark
+      const hasPresetCoords = file.presetLatitude !== undefined && file.presetLongitude !== undefined;
+      let finalLat = 0;
+      let finalLng = 0;
+      let locationSrc = 'Unknown';
+
+      if (coordinates) {
+        finalLat = coordinates.latitude;
+        finalLng = coordinates.longitude;
+        locationSrc = 'EXIF Data';
+      } else if (hasPresetCoords) {
+        finalLat = file.presetLatitude;
+        finalLng = file.presetLongitude;
+        locationSrc = 'Preset Telemetry';
+      } else {
+        // Fallback to landmark visual identification coordinates
+        const LANDMARK_COORDS = {
+          "Kurusura Submarine Museum": { latitude: 17.7182, longitude: 83.3308 },
+          "Kali Temple": { latitude: 17.7144, longitude: 83.3235 },
+          "VUDA Park Beach Access": { latitude: 17.7214, longitude: 83.3341 },
+          "Yarada Beach Lighthouse": { latitude: 17.6531, longitude: 83.2721 },
+          "Yarada Beach North Shore": { latitude: 17.6575, longitude: 83.2685 }
+        };
+
+        if (analysis.identifiedLandmark === 'None' || !LANDMARK_COORDS[analysis.identifiedLandmark]) {
+          this.log("DECISION: Image lacks GPS metadata and no pre-defined Visakhapatnam landmarks were identified. TERMINATING pipeline.");
+          return {
+            isValid: false,
+            reason: "Image lacks GPS location metadata, and no valid Visakhapatnam beach landmarks could be visually identified. Ticket dispatch aborted.",
+            logs: this.getLogs()
+          };
+        }
+
+        const resolved = LANDMARK_COORDS[analysis.identifiedLandmark];
+        finalLat = resolved.latitude;
+        finalLng = resolved.longitude;
+        locationSrc = 'Visual Landmark Recovery';
+        this.log(`RECOVERY: Resolved coordinates to pre-defined landmark "${analysis.identifiedLandmark}" (${finalLat.toFixed(5)}° N, ${finalLng.toFixed(5)}° E).`);
+      }
 
       this.log(`Assigned Location: ${finalLat.toFixed(5)}° N, ${finalLng.toFixed(5)}° E (${locationSrc})`);
 

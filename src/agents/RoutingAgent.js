@@ -1,4 +1,4 @@
-import { dbService } from '../services/firebase';
+import { dbService } from '../services/firebase.js';
 
 // Predefined Named Landmarks for Exact Location Matching
 const LANDMARKS = [
@@ -375,7 +375,8 @@ export class RoutingAgent {
       priority,
       priorityReason,
       tideStatus: tide.status,
-      logs: this.getLogs()
+      logs_vision: visionData.logs,
+      logs_routing: this.getLogs()
     };
   }
 }
