@@ -306,14 +306,32 @@ export default function GvmcDashboard() {
 
                 <div>
                   <span className="form-label">Resolved Location</span>
-                  <p style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--primary)' }}>📍 {selectedTicket.locationName || selectedTicket.landmark}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <p style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--primary)' }}>📍 {selectedTicket.locationName || selectedTicket.landmark}</p>
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${selectedTicket.latitude},${selectedTicket.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View on Google Maps"
+                      style={{ textDecoration: 'none', fontSize: '0.95rem', cursor: 'pointer' }}
+                    >
+                      🗺️
+                    </a>
+                  </div>
                   {selectedTicket.locationName && selectedTicket.locationName !== selectedTicket.landmark && (
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       Visual Landmark: {selectedTicket.landmark}
                     </p>
                   )}
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Coordinates: {selectedTicket.latitude.toFixed(5)}° N, {selectedTicket.longitude.toFixed(5)}° E ({selectedTicket.locationSource || 'Estimated'})
+                    Coordinates: <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${selectedTicket.latitude},${selectedTicket.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--primary)', textDecoration: 'underline', fontWeight: '500' }}
+                    >
+                      {selectedTicket.latitude.toFixed(5)}° N, {selectedTicket.longitude.toFixed(5)}° E
+                    </a> ({selectedTicket.locationSource || 'Estimated'})
                   </p>
                 </div>
 

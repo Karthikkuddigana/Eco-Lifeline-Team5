@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/firebase';
 
 export default function Settings({ isOpen, onClose }) {
-  const [geminiApiKey, setGeminiApiKey] = useState('');
   const [useFirebase, setUseFirebase] = useState(false);
   const [firebaseConfig, setFirebaseConfig] = useState({
     apiKey: '',
@@ -19,7 +18,6 @@ export default function Settings({ isOpen, onClose }) {
   useEffect(() => {
     if (isOpen) {
       const settings = dbService.getSettings();
-      setGeminiApiKey(settings.geminiApiKey || '');
       setUseFirebase(settings.useFirebase || false);
       if (settings.firebaseConfig) {
         setFirebaseConfig(settings.firebaseConfig);
@@ -37,7 +35,6 @@ export default function Settings({ isOpen, onClose }) {
   const handleSave = () => {
     try {
       dbService.saveSettings({
-        geminiApiKey,
         useFirebase,
         firebaseConfig
       });
@@ -60,26 +57,7 @@ export default function Settings({ isOpen, onClose }) {
           <button className="btn-icon" onClick={onClose}>✕</button>
         </div>
 
-        <hr style={{ border: '0', borderTop: '1px solid var(--border-light)' }} />
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', overflowY: 'auto', flex: 1, paddingRight: '0.25rem' }}>
-          {/* Gemini API Key */}
-          <div className="form-group">
-            <label className="form-label">Gemini API Key</label>
-            <input 
-              type="password" 
-              className="form-input" 
-              placeholder="Enter AI Gemini Flash API Key" 
-              value={geminiApiKey} 
-              onChange={(e) => setGeminiApiKey(e.target.value)} 
-            />
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
-              Used by the <b>Vision & Inspection Agent</b> to estimate coordinates, describe hazards, and identify landmarks.
-            </p>
-          </div>
-
-          <hr style={{ border: '0', borderTop: '1px solid var(--border-light)' }} />
-
           {/* Firebase Toggle */}
           <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <input 

@@ -118,89 +118,87 @@ export default function CitizenPortal() {
     setPipelineActive(true);
     setPipelineStep(1);
     
-    // Get Settings for API Keys
-    const settings = dbService.getSettings();
-    const apiKey = settings.geminiApiKey;
-
-    // --- AGENT 1: Vision & Inspection Agent ---
-    setVisionState({ status: 'running', logs: 'Initializing Vision & Inspection Agent...', result: null });
-    const visionAgent = new VisionAgent(apiKey);
+    // --- SECURE BACKEND AGENTS PIPELINE EXECUTION ---
+    setVisionState({ status: 'running', logs: 'Connecting to secure Sentinel backend...', result: null });
     
-    let fileToProcess = selectedFile;
-    if (selectedFile.presetUrl) {
-      // For preset images, create a fake File object to pass
-      fileToProcess = new File([new Blob()], selectedFile.name, { type: 'image/jpeg' });
-      fileToProcess.presetLatitude = selectedFile.presetLatitude;
-      fileToProcess.presetLongitude = selectedFile.presetLongitude;
-    }
+    try {
+      const formData = new FormData();
+      if (selectedFile.presetUrl) {
+        // Send a small dummy blob so multer parses it as a file upload
+        const dummyBlob = new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], { type: 'image/png' });
+        formData.append('image', dummyBlob, selectedFile.name);
+        formData.append('presetLatitude', selectedFile.presetLatitude);
+        formData.append('presetLongitude', selectedFile.presetLongitude);
+      } else {
+        formData.append('image', selectedFile);
+      }
 
-    // Capture logs via polling/callbacks in a simpler format
-    const checkVisionInterval = setInterval(() => {
-      setVisionState(prev => ({ ...prev, logs: visionAgent.getLogs() }));
-    }, 200);
+      const response = await fetch('/api/report', {
+        method: 'POST',
+        body: formData
+      });
 
-    const visionResult = await visionAgent.run(fileToProcess);
-    clearInterval(checkVisionInterval);
-    setVisionState({ 
-      status: visionResult.isValid ? 'completed' : 'failed', 
-      logs: visionAgent.getLogs(),
-      result: visionResult 
-    });
+      if (!response.ok) {
+        throw new Error(`Server returned error ${response.status}: ${response.statusText}`);
+      }
 
-    if (!visionResult.isValid) {
-      setPipelineStep(5); // Rejected
-      setFinalStatus(`Rejected: ${visionResult.reason}`);
-      return;
-    }
+      const res = await response.json();
 
-    // Delay 1.5 seconds for visual pacing
-    await new Promise(resolve => setTimeout(resolve, 1500));
+      if (!res.isValid) {
+        setVisionState({ 
+          status: 'failed', 
+          logs: res.logs || 'Image analysis failed verification.', 
+          result: null 
+        });
+        setPipelineStep(5);
+        setFinalStatus(`Rejected: ${res.reason}`);
+        return;
+      }
 
-    // --- AGENT 2: Geo-Spatial & Routing Agent ---
-    setPipelineStep(2);
-    setRoutingState({ status: 'running', logs: 'Initializing Geo-Spatial & Routing Agent...', result: null });
-    const routingAgent = new RoutingAgent();
+      // Parse merged logs back into separate agent states
+      const logSections = res.logs.split('=== Agent ');
+      let visionLogs = 'Running on backend...';
+      let routingLogs = 'Awaiting activation...';
+      let firebaseLogs = 'Awaiting activation...';
 
-    const checkRoutingInterval = setInterval(() => {
-      setRoutingState(prev => ({ ...prev, logs: routingAgent.getLogs() }));
-    }, 200);
+      logSections.forEach(section => {
+        if (section.startsWith('1: Vision')) {
+          visionLogs = '=== Agent ' + section.trim();
+        } else if (section.startsWith('2: Geo-Spatial')) {
+          routingLogs = '=== Agent ' + section.trim();
+        } else if (section.startsWith('3: Firebase')) {
+          firebaseLogs = '=== Agent ' + section.trim();
+        }
+      });
 
-    const routingResult = await routingAgent.run(visionResult);
-    clearInterval(checkRoutingInterval);
-    setRoutingState({ 
-      status: 'completed', 
-      logs: routingAgent.getLogs(),
-      result: routingResult 
-    });
+      // Animate the stepping sequence for premium UX
+      setVisionState({ status: 'running', logs: 'Extracting metadata on backend...', result: null });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setVisionState({ status: 'completed', logs: visionLogs, result: res });
 
-    // Delay 1.5 seconds for pacing
-    await new Promise(resolve => setTimeout(resolve, 1500));
+      setPipelineStep(2);
+      setRoutingState({ status: 'running', logs: 'Calculating geofences & priorities...', result: null });
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      setRoutingState({ status: 'completed', logs: routingLogs, result: res });
 
-    // --- AGENT 3: Firebase & Dispatch Agent ---
-    setPipelineStep(3);
-    setFirebaseState({ status: 'running', logs: 'Initializing Firebase & Dispatch Agent...', result: null });
-    const firebaseAgent = new FirebaseAgent();
+      setPipelineStep(3);
+      setFirebaseState({ status: 'running', logs: 'Auditing replication constraints...', result: null });
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      setFirebaseState({ status: 'completed', logs: firebaseLogs, result: res });
 
-    const checkFirebaseInterval = setInterval(() => {
-      setFirebaseState(prev => ({ ...prev, logs: firebaseAgent.getLogs() }));
-    }, 200);
+      // Finished
+      setPipelineStep(4);
+      if (res.actionTaken === 'UPVOTED_DUPLICATE') {
+        setFinalStatus(`INCIDENT RE-SUBMITTED: Duplicate found. Added upvote to ticket ${res.ticketId}.`);
+      } else {
+        setFinalStatus(`SUCCESS: Incident logged as new ticket ${res.ticketId}. Dispatched Sector Response.`);
+      }
 
-    // If preset, use preset URL, else default to preview
-    const dbImageUrl = selectedFile.presetUrl || previewUrl;
-    const firebaseResult = await firebaseAgent.run(routingResult, dbImageUrl);
-    clearInterval(checkFirebaseInterval);
-    setFirebaseState({ 
-      status: 'completed', 
-      logs: firebaseAgent.getLogs(),
-      result: firebaseResult 
-    });
-
-    // Finished
-    setPipelineStep(4);
-    if (firebaseResult.actionTaken === 'UPVOTED_DUPLICATE') {
-      setFinalStatus(`INCIDENT RE-SUBMITTED: Duplicate found. Added upvote to ticket ${firebaseResult.ticketId}.`);
-    } else {
-      setFinalStatus(`SUCCESS: Incident logged as new ticket ${firebaseResult.ticketId}. Dispatched Sector Response.`);
+    } catch (e) {
+      console.error(e);
+      setVisionState({ status: 'failed', logs: `Backend connection failure: ${e.message}`, result: null });
+      setPipelineStep(5);
+      setFinalStatus('Error: Failed to communicate with Sentinel backend.');
     }
   };
 
@@ -392,10 +390,22 @@ export default function CitizenPortal() {
             <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
               {finalStatus}
             </p>
+            {pipelineStep === 4 && firebaseState.result && firebaseState.result.ticket && (
+              <div style={{ marginTop: '0.75rem', marginBottom: '0.25rem' }}>
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${firebaseState.result.ticket.latitude},${firebaseState.result.ticket.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--primary)', textDecoration: 'underline', fontSize: '0.85rem', fontWeight: '600' }}
+                >
+                  🗺️ View Submitted Location on Google Maps
+                </a>
+              </div>
+            )}
             {pipelineStep === 4 && (
               <button 
                 className="btn-secondary" 
-                style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', marginTop: '0.75rem' }}
+                style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', marginTop: '0.5rem' }}
                 onClick={resetPipeline}
               >
                 File Another Report

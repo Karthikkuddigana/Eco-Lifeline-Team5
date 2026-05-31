@@ -29,13 +29,15 @@ export class VisionAgent {
   async run(file) {
     this.logs = [];
     this.log("Starting Vision & Inspection pipeline...");
-    this.log(`Received file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+    const fileName = file.originalname || file.name || 'uploaded_image.jpg';
+    const fileSize = file.size || 0;
+    this.log(`Received file: ${fileName} (${(fileSize / 1024).toFixed(1)} KB)`);
 
     // Step 1: Attempt EXIF parse to save API costs
     let coordinates = null;
     try {
       this.log("Parsing EXIF metadata for GPS coordinates...");
-      const gps = await exifr.gps(file);
+      const gps = await exifr.gps(file.buffer || file);
       if (gps && gps.latitude && gps.longitude) {
         coordinates = {
           latitude: gps.latitude,
@@ -58,7 +60,9 @@ export class VisionAgent {
 
     try {
       this.log("Converting image to base64 for Gemini Flash Vision API...");
-      const base64Data = await fileToBase64(file);
+      const base64Data = typeof window === 'undefined'
+        ? file.buffer.toString('base64')
+        : await fileToBase64(file);
       this.log("Invoking Gemini 2.5 Flash for landmark detection & hazard classification...");
 
       const schema = {
@@ -192,7 +196,7 @@ Analyze carefully. If the image is a generic selfie or document, reject it by se
     this.log("Running in simulation mode...");
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const nameLower = file.name.toLowerCase();
+    const nameLower = (file.originalname || file.name || 'image.jpg').toLowerCase();
     
     // Simulate rejection for selfies/documents
     if (nameLower.includes('selfie') || nameLower.includes('document') || nameLower.includes('test') && !nameLower.includes('beach')) {

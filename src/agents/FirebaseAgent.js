@@ -1,4 +1,4 @@
-import { dbService } from '../services/firebase';
+import { dbService } from '../services/firebase.js';
 
 // Helper to compute distance (in meters) between two coordinates
 const getDistance = (lat1, lon1, lat2, lon2) => {
