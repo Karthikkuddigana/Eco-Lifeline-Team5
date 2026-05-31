@@ -54,8 +54,12 @@ export class VisionAgent {
 
     // Step 2: visual analysis using Gemini Flash
     if (!this.apiKey) {
-      this.log("WARNING: Gemini API Key is missing. Simulating analysis...");
-      return this.simulateAnalysis(file, coordinates);
+      this.log("ERROR: Gemini API Key is missing. Pipeline terminated.");
+      return {
+        isValid: false,
+        reason: "Gemini API Key is not configured in the server .env file.",
+        logs: this.getLogs()
+      };
     }
 
     try {
@@ -186,69 +190,12 @@ Analyze carefully. If the image is a generic selfie or document, reject it by se
       };
 
     } catch (e) {
-      this.log(`Gemini API call failed: ${e.message}. Falling back to simulation...`);
-      return this.simulateAnalysis(file, coordinates);
-    }
-  }
-
-  // Fallback simulator for demonstrations without keys
-  async simulateAnalysis(file, coordinates) {
-    this.log("Running in simulation mode...");
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const nameLower = (file.originalname || file.name || 'image.jpg').toLowerCase();
-    
-    // Simulate rejection for selfies/documents
-    if (nameLower.includes('selfie') || nameLower.includes('document') || nameLower.includes('test') && !nameLower.includes('beach')) {
-      this.log("DECISION: Detected non-beach profile or selfie. TERMINATING pipeline.");
+      this.log(`Gemini API call failed: ${e.message}. Pipeline aborted.`);
       return {
         isValid: false,
-        reason: "Image does not appear to display marine debris or rip current issues.",
+        reason: `Gemini API execution error: ${e.message}`,
         logs: this.getLogs()
       };
     }
-
-    const isYarada = nameLower.includes('yarada');
-    const isRip = nameLower.includes('rip') || nameLower.includes('wave') || nameLower.includes('water');
-    const isGlass = nameLower.includes('glass') || nameLower.includes('bottle');
-    const isMedical = nameLower.includes('medical') || nameLower.includes('waste') || nameLower.includes('syringe');
-
-    let hazardType = 'general_trash';
-    let hazardDescription = 'Scattered debris and garbage heaps.';
-    if (isRip) {
-      hazardType = 'rip_current';
-      hazardDescription = 'Violent wave pattern indicating active rip current channels dangerous for swimmers.';
-    } else if (isMedical) {
-      hazardType = 'medical_waste';
-      hazardDescription = 'Discarded medical syringes, bandages, and pharmaceutical containers near shoreline.';
-    } else if (isGlass) {
-      hazardType = 'broken_glass';
-      hazardDescription = 'Broken beer bottles and sharp shards of glass scattered on the walking track.';
-    } else if (nameLower.includes('net') || nameLower.includes('plastic')) {
-      hazardType = 'plastic_debris';
-      hazardDescription = 'Ghost fishing net entangled with plastic trash blocking access.';
-    }
-
-    let lat = coordinates ? coordinates.latitude : (file.presetLatitude || (isYarada ? 17.6554 : 17.7144));
-    let lng = coordinates ? coordinates.longitude : (file.presetLongitude || (isYarada ? 83.2694 : 83.3235));
-    const locationSrc = coordinates ? 'EXIF Data' : (file.presetLatitude ? 'Preset Telemetry' : 'Landmark Estimation');
-
-    this.log(`Visual verification complete (Simulated)!`);
-    this.log(`Is Beach Issue: true`);
-    this.log(`Detected Beach: ${isYarada ? 'Yarada Beach' : 'RK Beach'}`);
-    this.log(`Visual Landmark: Near the ${isYarada ? 'Lighthouse pathway' : 'Kali Temple pavement'}`);
-    this.log(`Assigned Location: ${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E (${locationSrc})`);
-
-    return {
-      isValid: true,
-      beachName: isYarada ? 'Yarada Beach' : 'RK Beach',
-      landmark: isYarada ? 'Near Yarada Lighthouse beach access' : 'RK Beach near Kali Temple pavement',
-      hazardType,
-      hazardDescription,
-      latitude: lat,
-      longitude: lng,
-      locationSource: locationSrc,
-      logs: this.getLogs()
-    };
   }
 }
