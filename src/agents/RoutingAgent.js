@@ -68,8 +68,10 @@ const getTideStatus = () => {
 };
 
 export class RoutingAgent {
-  constructor() {
+  constructor(mapsApiKey = null) {
     this.logs = [];
+    // Accept key directly (Node.js/backend) or fall back to browser settings
+    this.mapsApiKey = mapsApiKey || null;
   }
 
   log(msg) {
@@ -119,9 +121,32 @@ export class RoutingAgent {
       }
     }
 
-    // Load Settings to check for Google Maps API key
-    const settings = dbService.getSettings();
-    const apiKey = settings.googleMapsApiKey;
+    // Load API key: injected via constructor (backend), settings, or environment (Vite)
+    let apiKey = this.mapsApiKey;
+    if (!apiKey) {
+      try {
+        const settings = dbService.getSettings();
+        apiKey = settings.googleMapsApiKey || null;
+      } catch {
+        // Running in environment without settings — skip
+      }
+    }
+
+    // Fallback: safely check Vite environment variable `VITE_MAPS_API_KEY` (client-side)
+    // or backend process env keys when running in Node.js.
+    if (!apiKey) {
+      try {
+        if (import.meta && import.meta.env && import.meta.env.VITE_MAPS_API_KEY) {
+          apiKey = import.meta.env.VITE_MAPS_API_KEY;
+        }
+      } catch {
+        // import.meta may not be available in some runtimes; ignore
+      }
+
+      if (!apiKey && globalThis?.process?.env) {
+        apiKey = globalThis.process.env.VITE_MAPS_API_KEY || null;
+      }
+    }
 
     // Optional dynamic Google APIs results
     let geocodedAddress = '';
@@ -189,7 +214,7 @@ export class RoutingAgent {
     this.log("Resolving geographical coordinates against landmarks directory...");
 
     // Step 2: Proximity Check (Exact Location Name Matching)
-    let locationName = '';
+    let locationName;
 
     if (resolvedLandmarkName && resolvedLandmarkDist <= 150) {
       locationName = resolvedLandmarkName;
@@ -240,8 +265,7 @@ export class RoutingAgent {
     // Step 3: Sector Assignment (nearest sector office)
     let nearestSector = SECTORS[0];
     let minDistance = Infinity;
-    let transitTimeStr = '';
-    let isDistanceMatrixUsed = false;
+    let transitTimeStr;
 
     SECTORS.forEach(sector => {
       const dist = calculateDistance(lat, lng, sector.latitude, sector.longitude);
@@ -253,40 +277,11 @@ export class RoutingAgent {
 
     this.log(`Pre-assigned candidate office: ${nearestSector.name} (Direct Distance: ${(minDistance/1000).toFixed(2)} km).`);
 
-    // 3. Google Distance Matrix lookup
-    if (apiKey) {
-      try {
-        this.log(`Invoking Google Distance Matrix API for routing metrics from ${nearestSector.name} to coordinates...`);
-        const origin = `${nearestSector.latitude},${nearestSector.longitude}`;
-        const destination = `${lat},${lng}`;
-        const distUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destination}&key=${apiKey}`;
-        
-        const distRes = await fetch(distUrl);
-        if (distRes.ok) {
-          const distData = await distRes.json();
-          if (distData.status === 'OK' && distData.rows && distData.rows[0].elements && distData.rows[0].elements[0].status === 'OK') {
-            const element = distData.rows[0].elements[0];
-            minDistance = element.distance.value; // road distance in meters
-            transitTimeStr = element.duration.text; // road transit time string, e.g. "12 mins"
-            isDistanceMatrixUsed = true;
-            this.log(`Google Routing Matrix Success! Driving Distance: ${(minDistance/1000).toFixed(2)} km. Estimated Transit: ${transitTimeStr}.`);
-          } else {
-            this.log(`Distance Matrix status: ${distData.status} or element status not OK. Using straight-line distance fallback.`);
-          }
-        }
-      } catch (e) {
-        this.log(`Distance Matrix API call failed: ${e.message}. Using straight-line distance fallback.`);
-      }
-    }
-
-    if (!isDistanceMatrixUsed) {
-      // Offline fallback: estimate travel time locally based on 30 km/h average speed in Visakhapatnam coastal roads
-      const travelHours = (minDistance / 1000) / 30; // hours
-      const travelMins = Math.round(travelHours * 60) + 5; // round mins + 5m response dispatch buffer
-      transitTimeStr = `${travelMins} mins`;
-      this.log(`Local Routing Estimation: Direct Distance: ${(minDistance/1000).toFixed(2)} km. Estimated Transit: ${transitTimeStr}.`);
-    }
-
+    // 3. Local route estimate using straight-line distance
+    const travelHours = (minDistance / 1000) / 30; // hours
+    const travelMins = Math.round(travelHours * 60) + 5; // add a dispatch buffer
+    transitTimeStr = `${travelMins} mins`;
+    this.log(`Local Routing Estimation: Direct Distance: ${(minDistance/1000).toFixed(2)} km. Estimated Transit: ${transitTimeStr}.`);
     this.log(`DECISION: Assigned to ${nearestSector.name}. Responding dispatch office: ${nearestSector.office}`);
 
     // Step 4: Tide Risk Assessment
