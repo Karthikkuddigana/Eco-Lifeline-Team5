@@ -189,7 +189,7 @@ export class RoutingAgent {
     this.log("Resolving geographical coordinates against landmarks directory...");
 
     // Step 2: Proximity Check (Exact Location Name Matching)
-    let locationName = '';
+    let locationName;
 
     if (resolvedLandmarkName && resolvedLandmarkDist <= 150) {
       locationName = resolvedLandmarkName;
