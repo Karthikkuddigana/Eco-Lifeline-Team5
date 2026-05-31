@@ -343,7 +343,8 @@ export default function GvmcDashboard() {
                 <div>
                   <span className="form-label">Dispatch Office</span>
                   <p style={{ fontSize: '0.9rem', fontWeight: '500' }}>🏢 {selectedTicket.dispatchOffice}</p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>📞 Hotline: {selectedTicket.contact}</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0' }}>📞 Hotline: {selectedTicket.contact}</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>⏱️ Travel Time: {selectedTicket.transitTime || '15 mins'}</p>
                 </div>
               </div>
 
