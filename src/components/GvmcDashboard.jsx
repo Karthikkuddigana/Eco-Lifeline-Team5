@@ -204,12 +204,12 @@ export default function GvmcDashboard() {
 
           {/* Incident Tickets list */}
           <div className="ticket-list">
-            {getFilteredTickets().length === 0 ? (
+            {getFilteredTickets(tickets, filter).length === 0 ? (
               <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
                 📭 No incidents match this filter.
               </div>
             ) : (
-              getFilteredTickets().map(ticket => (
+              getFilteredTickets(tickets, filter).map(ticket => (
                 <div 
                   key={ticket.id} 
                   className={`ticket-card ${selectedTicket && selectedTicket.id === ticket.id ? 'selected' : ''}`}
