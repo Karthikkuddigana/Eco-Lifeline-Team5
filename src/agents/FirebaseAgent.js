@@ -105,6 +105,7 @@ export class FirebaseAgent {
         zone: routedData.zone,
         sectorName: routedData.sectorName,
         dispatchOffice: routedData.dispatchOffice,
+        transitTime: routedData.transitTime || '15 mins',
         priority: routedData.priority,
         priorityReason: routedData.priorityReason,
         status: 'PENDING',
@@ -115,7 +116,7 @@ export class FirebaseAgent {
       };
 
       // Set logs from routing inside the ticket for full context
-      newTicket.logs = `--- Vision Agent ---\n${routedData.logs}\n\n--- Routing Agent ---\n${routedData.priorityReason}\nRouted to: ${routedData.dispatchOffice}\nTide risk: ${routedData.tideStatus}\n\n--- Firebase Agent ---\n[Firebase Agent]: No duplicates in 15m radius. Created new incident ticket.`;
+      newTicket.logs = `--- Vision Agent ---\n${routedData.logs}\n\n--- Routing Agent ---\n${routedData.priorityReason}\nRouted to: ${routedData.dispatchOffice}\nTransit estimation: ${routedData.transitTime || '15 mins'}\nTide risk: ${routedData.tideStatus}\n\n--- Firebase Agent ---\n[Firebase Agent]: No duplicates in 15m radius. Created new incident ticket.`;
 
       this.log("Saving document to Firestore...");
       const savedTicket = await dbService.saveTicket(newTicket);
@@ -124,7 +125,7 @@ export class FirebaseAgent {
       // Dispatch alert logging
       this.log(`ALERT: Triggering GVMC Responder dispatch pipeline...`);
       this.log(`SMS Alert Sent to ${routedData.sectorName} Crew:`);
-      this.log(`"[GVMC DISPATCH] URGENT: New [${routedData.priority}] sanitation issue at ${routedData.landmark}. Sector Office: ${routedData.dispatchOffice}. Contact: ${routedData.contact}. Case Ref: ${savedTicket.id}."`);
+      this.log(`"[GVMC DISPATCH] URGENT: New [${routedData.priority}] sanitation issue at ${routedData.landmark}. Sector Office: ${routedData.dispatchOffice}. Transit Time: ${routedData.transitTime || '15 mins'}. Contact: ${routedData.contact}. Case Ref: ${savedTicket.id}."`);
 
       return {
         actionTaken: 'CREATED_NEW_TICKET',

@@ -7,6 +7,8 @@ const getBaseUrl = () => {
   return ''; // In browser
 };
 
+const SETTINGS_KEY = 'eco_lifeline_settings';
+
 class DBService {
   constructor() {
     this.listeners = [];
@@ -17,7 +19,10 @@ class DBService {
   getSettings() {
     try {
       const settings = localStorage.getItem(SETTINGS_KEY);
-      return settings ? JSON.parse(settings) : {
+      const parsed = settings ? JSON.parse(settings) : {};
+      return {
+        geminiApiKey: '',
+        googleMapsApiKey: '',
         useFirebase: false,
         firebaseConfig: {
           apiKey: '',
@@ -26,10 +31,11 @@ class DBService {
           storageBucket: '',
           messagingSenderId: '',
           appId: ''
-        }
+        },
+        ...parsed
       };
     } catch {
-      return { useFirebase: false };
+      return { geminiApiKey: '', googleMapsApiKey: '', useFirebase: false };
     }
   }
 
